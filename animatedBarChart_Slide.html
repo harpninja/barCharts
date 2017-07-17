@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Animated bar chart</title>
+		<meta charset='UTF-8' />
+		<style>
+			body {
+				font-family: Verdana, sans-serif;
+				font-size: 8pt;
+				line-height: 12pt;
+				background: #ffffff;
+				color: #555555;
+			}
+			.axis path, .axis line {
+				fill: none;
+				stroke: #555555;
+				shape-rendering: crispEdges;
+			}
+			.crispy {
+				stroke: #333333;
+				stroke-width: 1px;
+				fill: steelblue;
+				shape-rendering: crispEdges;
+			}
+		</style>
+	</head>
+
+	<body>
+	<h4>Animated bar chart</h4>
+	<script src='https://d3js.org/d3.v4.min.js'></script>
+
+	<script>
+	'user strict';
+	const n = 20;
+	let t = -1;
+	let v = 0;
+	let data = d3.range(20).map(next);
+
+	function next () {
+		return {
+			time: ++t,
+			value: v = Math.floor(Math.random()*n)
+		};
+	}
+
+	setInterval(function () {
+		data.shift();
+		data.push(next());
+		redraw();
+	}, 1500);
+
+	const margin = {top: 20, right: 20, bottom: 30, left: 40};
+	const width = 960 - margin.left - margin.right;
+	const height = 500 - margin.top - margin.bottom;
+
+	const x = d3.scaleLinear()
+		.domain([0, n])
+		.range([0, width]);
+
+	const y = d3.scaleLinear()
+		.domain([0, n])
+		.range([height, 0]);
+
+	const barWidth = (width / n) - 5;
+
+	const svg = d3.select('body').append('svg')
+		.attr('width', width + margin.left + margin.right)
+		.attr('height', height + margin.top + margin.bottom);
+
+	const g = svg.append('g')
+		.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+	const graph = g.append('svg')
+		.attr('width', width-1)
+		.attr('height', height + margin.top + margin.bottom);
+
+	// draw x axis with offset from top left corner of the svg
+	g.append('g')
+		.attr('class', 'x axis')
+		.attr('transform', 'translate(0,' + height + ')')
+		.call(d3.axisBottom(x));
+
+	// draw y axis
+	g.append('g')
+		.attr('class', 'y axis')
+		.call(d3.axisLeft(y));
+
+	graph.selectAll('rect')
+		.data(data)
+		.enter().append('rect')
+		.attr('class', 'crispy')
+		.attr('x', function(d) { return x(d.time); })
+		.attr('width', barWidth)
+		.attr('y', function(d) { return y(d.value); })
+		.attr('height', function(d) { return (height - y(d.value)); });
+
+	function redraw()
+	{
+		// time update
+		x.domain([(t - n), t]);
+
+		// ENTER: create bars for new data
+		graph.selectAll('rect')
+			.data(data, function(d) { return d.time; })  // join data to rects
+			.enter().append('rect')		// enter creates new rects for the new data
+			.attr('class', 'crispy')
+			.attr('x', function(d) { return x(d.time); })
+			.attr('y', function(d) { return y(d.value); })
+			.attr('width', barWidth)
+			.attr('height', function(d) { return (height - y(d.value)); });
+
+		 // UPDATE: update the bars we already have
+		graph.transition()
+			.duration(1000)
+			.selectAll('rect')
+			.attr('x', function(d) { return x(d.time); });
+
+		// EXIT: remove the bars we no longer have data for
+		graph.transition()
+			.duration(1000)
+			.selectAll('graph.rect')
+			.attr('x', function(d) { return x(d.time - 1 ); })
+			.exit()
+			.remove();
+	}
+	</script>
+</body>
+</html>
